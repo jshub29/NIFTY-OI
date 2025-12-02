@@ -3,8 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Nifty OI Dashboard</title>
-  <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  <title>Nifty OI Dashboard — Sample Run</title>
   <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
   <style>
     :root{--bg:#071029;--card:rgba(255,255,255,0.02);--muted:#94a3b8;--accent:#06b6d4}
@@ -26,26 +25,27 @@
     .slot-title{font-size:13px;color:#cfe8f0;margin-bottom:6px}
     .chart-slot{height:320px}
     .table-slot{max-height:260px;overflow:auto}
+    /* nine strike highlights */
+    .nine-atm{background:linear-gradient(90deg, rgba(6,182,212,0.12), rgba(6,182,212,0.06));color:#e6f9fb;font-weight:700}
+    .nine-call-top{background:linear-gradient(90deg, rgba(255,200,0,0.12), rgba(255,200,0,0.04));font-weight:700}
+    .nine-put-top{background:linear-gradient(90deg, rgba(255,100,140,0.12), rgba(255,100,140,0.04));font-weight:700}
   </style>
 </head>
 <body>
   <div class="container">
     <header>
       <div>
-        <h1>Nifty Options — OI Dashboard</h1>
-        <div class="muted">Placeholders ready for 3 charts & 3 tables — connect CSVs or API next</div>
+        <h1>Nifty Options — OI Dashboard (Sample run)</h1>
+        <div class="muted">This sample uses embedded data so it renders without a server. Replace with CSV fetch for live use.</div>
       </div>
       <div class="controls">
-        <label class="muted">Date</label>
-        <input id="date" type="date" />
-        <button id="refresh" class="btn">Refresh</button>
+        <label class="muted">Sample mode</label>
+        <button id="reload" class="btn">Reload sample</button>
       </div>
     </header>
 
-    <!-- MAIN GRID: left large column, right sidebar -->
     <div class="grid">
       <div class="card">
-        <!-- Top: three charts in a row (responsive stacks on narrow screens) -->
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
           <div>
             <div class="slot-title">Chart 1 — Net Positioning (time series)</div>
@@ -56,18 +56,16 @@
             <div id="chart-2" class="chart-slot card"></div>
           </div>
           <div>
-            <div class="slot-title">Chart 3 — PCR / OICR / ATM PCR</div>
+            <div class="slot-title">Chart 3 — PCR / ATM PCR</div>
             <div id="chart-3" class="chart-slot card"></div>
           </div>
         </div>
 
-        <!-- Spacer -->
         <div style="height:12px"></div>
 
-        <!-- Three tables stacked vertically (Table A, Table B (9-strike), Table C) -->
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
           <div class="card table-slot" id="table-a-card">
-            <div class="slot-title">Table A — Top strikes summary</div>
+            <div class="slot-title">Table A — Top strikes summary (sample)</div>
             <div id="table-a"></div>
           </div>
 
@@ -84,50 +82,150 @@
 
       </div>
 
-      <!-- RIGHT SIDEBAR: additional info + full strikes table -->
       <div class="card">
-        <div class="slot-title">Full Strikes (paged)</div>
+        <div class="slot-title">Full Strikes (sample)</div>
         <div id="strike-table-container" class="table-slot"></div>
         <div style="height:10px"></div>
-        <div class="small muted">Use the Refresh button to reload CSVs. Next: wire data source (CSV/Raw URL) or I can add GitHub Actions to auto-update.</div>
+        <div class="small muted">This is a sample run with embedded arrays. Use the fetch-based version to load CSVs from <code>data/</code>.</div>
       </div>
     </div>
 
-    <footer>
-      Built for GitHub Pages — static dashboard (Plotly). 
-    </footer>
+    <footer>Sample dashboard • Demo data embedded</footer>
   </div>
 
 <script>
-// placeholder JS: basic wiring to demonstrate slots exist
-function emptyTableHtml(title){
-  return `<div style="padding:8px;color:var(--muted)">No data yet. Will render ${title} here.</div>`;
+// ---------------- Sample embedded data (small realistic sample) ----------------
+// Table A CSV schema: strike,ce_oi,ce_chg,pe_oi,pe_chg,pcr
+const SAMPLE_TABLE_A = [
+  {strike:26200, ce_oi:120000, ce_chg:5000, pe_oi:90000, pe_chg:-2000, pcr:0.75},
+  {strike:26250, ce_oi:150000, ce_chg:12000, pe_oi:40000, pe_chg:3000, pcr:0.27},
+  {strike:26300, ce_oi:367288, ce_chg:178261, pe_oi:71579, pe_chg:5330, pcr:0.19},
+  {strike:26350, ce_oi:151056, ce_chg:75023, pe_oi:14162, pe_chg:2168, pcr:0.09},
+  {strike:26400, ce_oi:90000, ce_chg:2000, pe_oi:120000, pe_chg:5000, pcr:1.33},
+  {strike:26450, ce_oi:80000, ce_chg:-1000, pe_oi:110000, pe_chg:1000, pcr:1.375},
+  {strike:26500, ce_oi:70000, ce_chg:500, pe_oi:60000, pe_chg:250, pcr:0.86},
+  {strike:26550, ce_oi:50000, ce_chg:-200, pe_oi:48000, pe_chg:100, pcr:0.96},
+  {strike:26600, ce_oi:40000, ce_chg:0, pe_oi:30000, pe_chg:-500, pcr:0.75}
+];
+
+// Latest strikes long format (subset) — date,strike,ce_oi,pe_oi,ce_chg,pe_chg
+const SAMPLE_LATEST_STRIKES = SAMPLE_TABLE_A.map(r=>({date: new Date().toISOString().slice(0,10), strike:r.strike, ce_oi:r.ce_oi, pe_oi:r.pe_oi, ce_chg:r.ce_chg, pe_chg:r.pe_chg}));
+
+// Time series sample (TIME, CALL_OI, PUT_OI, CALL_CHG_OI, PUT_CHG_OI, PCR, Net Positioning, ATM_PCR)
+const SAMPLE_TS = [
+  {TIME:'09:30', CALL_OI:200000, PUT_OI:180000, CALL_CHG_OI:5000, PUT_CHG_OI:-2000, PCR:0.9, 'Net Positioning':-20000, ATM_PCR:0.8},
+  {TIME:'10:30', CALL_OI:220000, PUT_OI:170000, CALL_CHG_OI:20000, PUT_CHG_OI:-10000, PCR:0.77, 'Net Positioning':-5000, ATM_PCR:0.75},
+  {TIME:'11:30', CALL_OI:250000, PUT_OI:160000, CALL_CHG_OI:30000, PUT_CHG_OI:-10000, PCR:0.64, 'Net Positioning':-9000, ATM_PCR:0.7},
+  {TIME:'12:30', CALL_OI:300000, PUT_OI:150000, CALL_CHG_OI:50000, PUT_CHG_OI:-10000, PCR:0.5, 'Net Positioning':-15000, ATM_PCR:0.6},
+  {TIME:'13:30', CALL_OI:320000, PUT_OI:140000, CALL_CHG_OI:20000, PUT_CHG_OI:-10000, PCR:0.44, 'Net Positioning':-18000, ATM_PCR:0.55},
+  {TIME:'14:30', CALL_OI:330000, PUT_OI:130000, CALL_CHG_OI:10000, PUT_CHG_OI:-10000, PCR:0.39, 'Net Positioning':-20000, ATM_PCR:0.5},
+  {TIME:'15:30', CALL_OI:340000, PUT_OI:120000, CALL_CHG_OI:10000, PUT_CHG_OI:-10000, PCR:0.35, 'Net Positioning':-22000, ATM_PCR:0.45}
+];
+
+// ---------------- Helper formatters ----------------
+function fmt(n){ if(n===null||n===undefined||n==='') return '-'; return Number(n).toLocaleString(); }
+
+// ---------------- Render Table A ----------------
+function renderTableA(rows){
+  const mount = document.getElementById('table-a');
+  if(!rows || rows.length===0){ mount.innerHTML = '<div style="padding:8px;color:var(--muted)">No data</div>'; return; }
+  let html = '<table style="width:100%"><thead><tr><th>Strike</th><th>Call OI</th><th>Call Δ</th><th>Put OI</th><th>Put Δ</th><th>PCR</th></tr></thead><tbody>';
+  rows.forEach(r=>{
+    html += `<tr><td>${r.strike}</td><td>${fmt(r.ce_oi)}</td><td>${r.ce_chg}</td><td>${fmt(r.pe_oi)}</td><td>${r.pe_chg}</td><td>${r.pcr}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  mount.innerHTML = html;
 }
 
-function placeholderChart(elId, text){
-  const el = document.getElementById(elId);
-  el.innerHTML = '';
-  var gd = document.createElement('div'); gd.style.height='100%'; el.appendChild(gd);
-  var trace = [{x:[0,1], y:[0,0], mode:'lines', line:{dash:'dash'}, name:text}];
-  Plotly.newPlot(gd, trace, {margin:{t:10,l:40,r:20,b:30}, xaxis:{visible:false}, yaxis:{visible:false}});
+// ---------------- Render 9-strike table (ATM ±4) ----------------
+function renderNineStrikeTable(strikes, ts){
+  // determine ATM from latest TS if present — use last TS's CALL_OI/PUT_OI? we'll approximate ATM as strike with max ce+pe in sample
+  if(!Array.isArray(strikes) || strikes.length===0) return;
+  const strikeVals = strikes.map(s=>Number(s.strike)).sort((a,b)=>a-b);
+  // choose ATM as strike with highest combined OI
+  let atm = strikeVals[0];
+  let maxSum = -1;
+  strikes.forEach(s=>{ const sum = Number(s.ce_oi||0) + Number(s.pe_oi||0); if(sum>maxSum){ maxSum=sum; atm=Number(s.strike); }});
+  // build 9 strikes centered on atm
+  const idx = strikeVals.indexOf(atm);
+  const start = Math.max(0, idx-4), end = Math.min(strikeVals.length-1, idx+4);
+  const nine = strikeVals.slice(start,end+1);
+  // map strikes
+  const map = {};
+  strikes.forEach(s=> map[Number(s.strike)] = s);
+  const block = nine.map(s=> map[s] ? map[s] : {strike:s, ce_oi:0, pe_oi:0, ce_chg:0, pe_chg:0});
+  // compute top2 call/put within block
+  const topCalls = block.slice().sort((a,b)=>b.ce_oi - a.ce_oi).slice(0,2).map(r=>r.strike);
+  const topPuts = block.slice().sort((a,b)=>b.pe_oi - a.pe_oi).slice(0,2).map(r=>r.strike);
+
+  const mount = document.getElementById('table-b');
+  let html = '<table style="width:100%"><thead><tr><th>Strike</th><th>Call OI</th><th>Call Δ</th><th>Put OI</th><th>Put Δ</th><th>PCR</th></tr></thead><tbody>';
+  block.forEach(r=>{
+    const clsRow = r.strike===atm ? 'nine-atm' : '';
+    const callCls = topCalls.includes(r.strike) ? 'nine-call-top' : '';
+    const putCls = topPuts.includes(r.strike) ? 'nine-put-top' : '';
+    html += `<tr class="${clsRow}"><td>${r.strike}</td><td class="${callCls}">${fmt(r.ce_oi)}</td><td>${r.ce_chg}</td><td class="${putCls}">${fmt(r.pe_oi)}</td><td>${r.pe_chg}</td><td>${(r.pcr!==undefined?r.pcr:'-')}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  mount.innerHTML = html;
 }
 
-function renderPlaceholders(){
-  // Charts
-  placeholderChart('chart-1','Net Positioning');
-  placeholderChart('chart-2','Call/Put % Change');
-  placeholderChart('chart-3','PCR / OICR');
-  // Tables
-  document.getElementById('table-a').innerHTML = emptyTableHtml('Table A');
-  document.getElementById('table-b').innerHTML = emptyTableHtml('Table B (9-strike)');
-  document.getElementById('table-c').innerHTML = emptyTableHtml('Table C');
-  document.getElementById('strike-table-container').innerHTML = emptyTableHtml('Full strikes');
+// ---------------- Render time-series snapshot table ----------------
+function renderTableC(ts){
+  const mount = document.getElementById('table-c');
+  if(!ts || ts.length===0){ mount.innerHTML = '<div style="padding:8px;color:var(--muted)">No TS data</div>'; return; }
+  // show last 6 rows
+  const last = ts.slice(-6);
+  let html = '<table style="width:100%"><thead><tr><th>TIME</th><th>CALL_OI</th><th>PUT_OI</th><th>CALL Δ</th><th>PUT Δ</th><th>PCR</th></tr></thead><tbody>';
+  last.forEach(r=> html += `<tr><td>${r.TIME}</td><td>${fmt(r.CALL_OI)}</td><td>${fmt(r.PUT_OI)}</td><td>${fmt(r.CALL_CHG_OI||r.CALL_CHG_OI)}</td><td>${fmt(r.PUT_CHG_OI||r.PUT_CHG_OI)}</td><td>${r.PCR||r.PCR}</td></tr>`);
+  html += '</tbody></table>';
+  mount.innerHTML = html;
 }
 
-// Wire refresh button
-document.getElementById('refresh').addEventListener('click', function(){ renderPlaceholders(); });
-// auto-run on load
-window.addEventListener('load', function(){ document.getElementById('date').value = new Date().toISOString().slice(0,10); renderPlaceholders(); });
+// ---------------- Render full strikes table ----------------
+function renderFullStrikesTable(strikes){
+  const mount = document.getElementById('strike-table-container');
+  if(!strikes || strikes.length===0){ mount.innerHTML = '<div style="padding:8px;color:var(--muted)">No strikes</div>'; return; }
+  let html = '<table style="width:100%"><thead><tr><th>Strike</th><th>Call OI</th><th>Put OI</th><th>Call Δ</th><th>Put Δ</th></tr></thead><tbody>';
+  strikes.slice().sort((a,b)=>a.strike-b.strike).forEach(r=> html += `<tr><td>${r.strike}</td><td>${fmt(r.ce_oi)}</td><td>${fmt(r.pe_oi)}</td><td>${r.ce_chg||'-'}</td><td>${r.pe_chg||'-'}</td></tr>`);
+  html += '</tbody></table>';
+  mount.innerHTML = html;
+}
+
+// ---------------- Charts ----------------
+function plotNetPosition(ts){
+  const x = ts.map(r=>r.TIME);
+  const y = ts.map(r=>Number(r['Net Positioning']||0));
+  Plotly.newPlot('chart-1', [{x,y,mode:'lines',name:'Net Positioning'}], {margin:{t:20}});
+}
+
+function plotPctChange(ts){
+  const x = ts.map(r=>r.TIME);
+  const call_pct = ts.map(r=>Number(r.CALL_CHG_OI||r.CALL_CHG_OI||0));
+  const put_pct = ts.map(r=>Number(r.PUT_CHG_OI||r.PUT_CHG_OI||0));
+  Plotly.newPlot('chart-2', [{x,y:call_pct,name:'Call Δ',mode:'lines'},{x,y:put_pct,name:'Put Δ',mode:'lines'}], {margin:{t:20}});
+}
+
+function plotPCR(ts){
+  const x = ts.map(r=>r.TIME);
+  const pcr = ts.map(r=>Number(r.PCR||0));
+  Plotly.newPlot('chart-3', [{x,y:pcr,mode:'lines',name:'PCR'}], {margin:{t:20}});
+}
+
+// ---------------- Main render (uses sample data) ----------------
+function renderAllFromSample(){
+  renderTableA(SAMPLE_TABLE_A);
+  renderNineStrikeTable(SAMPLE_LATEST_STRIKES, SAMPLE_TS);
+  renderTableC(SAMPLE_TS);
+  renderFullStrikesTable(SAMPLE_LATEST_STRIKES);
+  plotNetPosition(SAMPLE_TS);
+  plotPctChange(SAMPLE_TS);
+  plotPCR(SAMPLE_TS);
+}
+
+// wire reload
+document.getElementById('reload').addEventListener('click', renderAllFromSample);
+window.addEventListener('load', renderAllFromSample);
 </script>
 </body>
 </html>
