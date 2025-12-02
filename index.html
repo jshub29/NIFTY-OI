@@ -1,217 +1,133 @@
-<!--
-Nifty OI Dashboard - Single-file static site for GitHub Pages
-Features included:
-- Responsive single-page HTML (index.html)
-- Sample Nifty options open interest line + bar charts using Plotly (CDN)
-- Dummy/sample data included; functions to load real data via CSV/JSON (fetch)
-- Simple UI: date picker, symbol input (NIFTY), refresh button, export CSV
-- Instructions (in comments) for how to deploy to GitHub Pages and how to wire real data/APIs
-- Notes on adding subscription/payment links (Gumroad / BuyMeACoffee) and AdSense snippet placeholder
-
-How to use:
-1. Create a new GitHub repo (public or private). Add this file as index.html in the repo root.
-2. Commit & push. In repo settings -> Pages -> set source to main branch / root -> site will be available at https://<username>.github.io/<repo>
-3. To use real OI data: either host a CSV/JSON in the repo (raw.githubusercontent.com link), or modify `fetchData()` to call your API endpoint which returns JSON.
-
-Important limitations: this is static. For auth, user accounts, or paywall you must use external services (Gumroad, Stripe checkout, Firebase auth, Netlify Identity, etc.).
--->
-
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Nifty OI Dashboard — Static</title>
+  <title>Nifty OI Dashboard</title>
   <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
   <style>
-    /* Minimal Tailwind-like quick styling without dependency */
-    :root{--bg:#0f1724;--card:#0b1220;--muted:#94a3b8;--accent:#06b6d4}
+    :root{--bg:#071029;--card:rgba(255,255,255,0.02);--muted:#94a3b8;--accent:#06b6d4}
     html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
     body{background:linear-gradient(180deg,#071029 0%, #071730 100%);color:#e6eef8}
-    .container{max-width:1100px;margin:28px auto;padding:18px}
+    .container{max-width:1200px;margin:18px auto;padding:18px}
     header{display:flex;gap:16px;align-items:center;justify-content:space-between}
     h1{margin:0;font-size:18px}
     .controls{display:flex;gap:8px;align-items:center}
     input,select,button{padding:8px 10px;border-radius:8px;border:0;background:#071e2a;color:inherit}
     .btn{background:var(--accent);color:#012;cursor:pointer}
     .grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:18px}
-    @media(min-width:900px){.grid{grid-template-columns:1fr 420px}}
-    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
-    #chart-main{height:420px}
-    #chart-right{height:420px}
+    @media(min-width:980px){.grid{grid-template-columns:1fr 420px}}
+    .card{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    .muted{color:var(--muted)}
     table{width:100%;border-collapse:collapse;color:var(--muted);font-size:13px}
     th,td{padding:6px 8px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.03)}
-    .muted{color:var(--muted)}
     footer{margin-top:18px;color:var(--muted);font-size:13px}
+    .slot-title{font-size:13px;color:#cfe8f0;margin-bottom:6px}
+    .chart-slot{height:320px}
+    .table-slot{max-height:260px;overflow:auto}
   </style>
-  <!-- Plotly CDN -->
-  <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
 </head>
 <body>
   <div class="container">
     <header>
       <div>
-        <h1>Nifty Options OI Dashboard</h1>
-        <div class="muted">Static GitHub Pages template — shows sample OI & change charts</div>
+        <h1>Nifty Options — OI Dashboard</h1>
+        <div class="muted">Placeholders ready for 3 charts & 3 tables — connect CSVs or API next</div>
       </div>
       <div class="controls">
         <label class="muted">Date</label>
         <input id="date" type="date" />
-        <label class="muted">Symbol</label>
-        <select id="symbol"><option value="NIFTY">NIFTY</option></select>
         <button id="refresh" class="btn">Refresh</button>
-        <button id="export">Export CSV</button>
       </div>
     </header>
 
+    <!-- MAIN GRID: left large column, right sidebar -->
     <div class="grid">
       <div class="card">
-        <div id="chart-main"></div>
-      </div>
-
-      <div class="card">
-        <div id="chart-right"></div>
-        <div style="margin-top:8px">
-          <strong>Top strikes by OI (sample)</strong>
-          <div style="max-height:200px;overflow:auto;margin-top:6px">
-            <table id="strike-table"><thead><tr><th>Strike</th><th>Call OI</th><th>Put OI</th></tr></thead><tbody></tbody></table>
+        <!-- Top: three charts in a row (responsive stacks on narrow screens) -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+          <div>
+            <div class="slot-title">Chart 1 — Net Positioning (time series)</div>
+            <div id="chart-1" class="chart-slot card"></div>
+          </div>
+          <div>
+            <div class="slot-title">Chart 2 — Call/Put OI Change (%)</div>
+            <div id="chart-2" class="chart-slot card"></div>
+          </div>
+          <div>
+            <div class="slot-title">Chart 3 — PCR / OICR / ATM PCR</div>
+            <div id="chart-3" class="chart-slot card"></div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <div style="margin-top:12px" class="card">
-      <strong>Notes</strong>
-      <p class="muted">This site is WIP</p>
+        <!-- Spacer -->
+        <div style="height:12px"></div>
+
+        <!-- Three tables stacked vertically (Table A, Table B (9-strike), Table C) -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+          <div class="card table-slot" id="table-a-card">
+            <div class="slot-title">Table A — Top strikes summary</div>
+            <div id="table-a"></div>
+          </div>
+
+          <div class="card table-slot" id="table-b-card">
+            <div class="slot-title">Table B — 9-strike summary (ATM ±4)</div>
+            <div id="table-b"></div>
+          </div>
+
+          <div class="card table-slot" id="table-c-card">
+            <div class="slot-title">Table C — Recent time-series snapshot</div>
+            <div id="table-c"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT SIDEBAR: additional info + full strikes table -->
+      <div class="card">
+        <div class="slot-title">Full Strikes (paged)</div>
+        <div id="strike-table-container" class="table-slot"></div>
+        <div style="height:10px"></div>
+        <div class="small muted">Use the Refresh button to reload CSVs. Next: wire data source (CSV/Raw URL) or I can add GitHub Actions to auto-update.</div>
+      </div>
     </div>
 
     <footer>
-      Built for GitHub Pages • Integrate Gumroad / BuyMeACoffee for subscriptions • Add AdSense snippet in &lt;head&gt; if you want ads
+      Built for GitHub Pages — static dashboard (Plotly). 
     </footer>
   </div>
 
 <script>
-// ------------------ Sample data generator (replace with fetchData) ------------------
-function generateSampleData(){
-  // returns array of rows: {date, strike, ce_oi, pe_oi, ce_chg, pe_chg}
-  const strikes = [];
-  const base = 22000; // sample NIFTY 50 index
-  for(let k=-20;k<=20;k++){
-    const s = base + k*50;
-    strikes.push({
-      date: new Date().toISOString().slice(0,10),
-      strike: s,
-      ce_oi: Math.round(Math.abs(200000 - (k*3000) + Math.random()*30000)),
-      pe_oi: Math.round(Math.abs(180000 + (k*2500) + Math.random()*20000)),
-      ce_chg: Math.round((Math.random()-0.5)*5000),
-      pe_chg: Math.round((Math.random()-0.5)*5000)
-    });
-  }
-  return strikes;
+// placeholder JS: basic wiring to demonstrate slots exist
+function emptyTableHtml(title){
+  return `<div style="padding:8px;color:var(--muted)">No data yet. Will render ${title} here.</div>`;
 }
 
-// ------------------ Data fetching (modify this to point to your live source) ------------------
-async function fetchData(date, symbol){
-  // You can either:
-  // 1) Fetch raw CSV from your GitHub repo (https://raw.githubusercontent.com/<user>/<repo>/main/data/oi-2025-12-02.csv)
-  // 2) Fetch JSON from your API endpoint that returns an array of rows
-  // 3) For now we return sample data
-
-  // Example to fetch CSV (uncomment and adapt):
-  // const resp = await fetch('https://raw.githubusercontent.com/<user>/<repo>/main/data/oi-'+date+'.csv');
-  // const txt = await resp.text();
-  // parse CSV to rows and return
-
-  return generateSampleData();
+function placeholderChart(elId, text){
+  const el = document.getElementById(elId);
+  el.innerHTML = '';
+  var gd = document.createElement('div'); gd.style.height='100%'; el.appendChild(gd);
+  var trace = [{x:[0,1], y:[0,0], mode:'lines', line:{dash:'dash'}, name:text}];
+  Plotly.newPlot(gd, trace, {margin:{t:10,l:40,r:20,b:30}, xaxis:{visible:false}, yaxis:{visible:false}});
 }
 
-// ------------------ Render logic ------------------
-function aggregateForChart(rows){
-  // create arrays for strikes and OI sums
-  rows.sort((a,b)=>a.strike - b.strike);
-  const strikes = rows.map(r=>r.strike);
-  const ce = rows.map(r=>r.ce_oi);
-  const pe = rows.map(r=>r.pe_oi);
-  const ce_chg = rows.map(r=>r.ce_chg);
-  const pe_chg = rows.map(r=>r.pe_chg);
-  return {strikes,ce,pe,ce_chg,pe_chg};
+function renderPlaceholders(){
+  // Charts
+  placeholderChart('chart-1','Net Positioning');
+  placeholderChart('chart-2','Call/Put % Change');
+  placeholderChart('chart-3','PCR / OICR');
+  // Tables
+  document.getElementById('table-a').innerHTML = emptyTableHtml('Table A');
+  document.getElementById('table-b').innerHTML = emptyTableHtml('Table B (9-strike)');
+  document.getElementById('table-c').innerHTML = emptyTableHtml('Table C');
+  document.getElementById('strike-table-container').innerHTML = emptyTableHtml('Full strikes');
 }
 
-function renderCharts(rows){
-  const agg = aggregateForChart(rows);
-
-  const traces = [
-    {x: agg.strikes, y: agg.ce, name: 'Call OI', type:'bar', yaxis:'y2', opacity:0.9},
-    {x: agg.strikes, y: agg.pe, name: 'Put OI', type:'bar', yaxis:'y2', opacity:0.9},
-    {x: agg.strikes, y: agg.ce.map((v,i)=>v-agg.pe[i]), name: 'OI Diff (CE-PE)', type:'scatter', mode:'lines+markers'}
-  ];
-
-  const layout = {
-    title: 'Open Interest by Strike',
-    barmode:'group',
-    xaxis:{title:'Strike'},
-    yaxis:{title:'OI Diff', side:'left'},
-    yaxis2:{overlaying:'y',side:'right',title:'OI', showgrid:false},
-    legend:{orientation:'h'},
-    margin:{t:40,l:60,r:60,b:60}
-  };
-
-  Plotly.newPlot('chart-main', traces, layout, {responsive:true});
-
-  // Right small chart: CE change & PE change
-  const traces2 = [
-    {x: agg.strikes, y: agg.ce_chg, name:'CE Δ', type:'bar'},
-    {x: agg.strikes, y: agg.pe_chg, name:'PE Δ', type:'bar'}
-  ];
-  const layout2 = {title:'OI Change (Δ)', margin:{t:30,l:40,r:20,b:40}};
-  Plotly.newPlot('chart-right', traces2, layout2, {responsive:true});
-
-  // Fill table top strikes
-  const tbody = document.querySelector('#strike-table tbody'); tbody.innerHTML='';
-  const sorted = rows.slice().sort((a,b)=> (b.ce_oi + b.pe_oi) - (a.ce_oi + a.pe_oi));
-  for(let i=0;i<20 && i<sorted.length;i++){
-    const r = sorted[i];
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.strike}</td><td>${r.ce_oi.toLocaleString()}</td><td>${r.pe_oi.toLocaleString()}</td>`;
-    tbody.appendChild(tr);
-  }
-}
-
-// ------------------ UI wiring ------------------
-async function refresh(){
-  const date = document.getElementById('date').value || new Date().toISOString().slice(0,10);
-  const symbol = document.getElementById('symbol').value;
-  document.getElementById('refresh').disabled=true;
-  document.getElementById('refresh').innerText='Loading...';
-  try{
-    const rows = await fetchData(date,symbol);
-    renderCharts(rows);
-  }catch(e){
-    console.error(e); alert('Failed to load data');
-  }finally{
-    document.getElementById('refresh').disabled=false;
-    document.getElementById('refresh').innerText='Refresh';
-  }
-}
-
-// Export CSV from current sample rows
-function exportCSV(){
-  const rows = generateSampleData();
-  const header = ['date','strike','ce_oi','pe_oi','ce_chg','pe_chg'];
-  const csv = [header.join(',')].concat(rows.map(r => [r.date,r.strike,r.ce_oi,r.pe_oi,r.ce_chg,r.pe_chg].join(','))).join('\n');
-  const blob = new Blob([csv],{type:'text/csv'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download = 'nifty-oi-sample.csv'; a.click(); URL.revokeObjectURL(url);
-}
-
-// Init
-document.getElementById('refresh').addEventListener('click', refresh);
-document.getElementById('export').addEventListener('click', exportCSV);
-(function(){
-  document.getElementById('date').value = new Date().toISOString().slice(0,10);
-  refresh();
-})();
-
+// Wire refresh button
+document.getElementById('refresh').addEventListener('click', function(){ renderPlaceholders(); });
+// auto-run on load
+window.addEventListener('load', function(){ document.getElementById('date').value = new Date().toISOString().slice(0,10); renderPlaceholders(); });
 </script>
 </body>
 </html>
